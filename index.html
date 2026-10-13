@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NumFlash</title>
+  <meta name="theme-color" content="#111318">
+  <meta name="robots" content="noindex">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>NumFlash</span></div>
+    <div class="row gap"><button id="openSettings" class="pill" type="button" aria-label="Settings">⚙</button><button id="connect" class="pill" type="button"><span class="dot"></span><span id="connectLabel">Connect</span></button></div>
+  </header>
+
+  <main>
+    <section id="noUsb" class="card warn" hidden>
+      <h2>WebUSB isn't available here</h2>
+      <p>Open NumFlash in <b>Chrome</b> (or another Chromium browser) on Android or a computer. iPhones and iPads can't talk to the calculator, and Firefox/Safari don't support WebUSB.</p>
+    </section>
+
+    <section id="setup" class="card warn" hidden>
+      <h2>One-time setup</h2>
+      <p>NumFlash links apps with NumWorks' own <code>ld</code> and <code>objcopy</code> WebAssembly tools. I couldn't find <span id="missingList"></span>. Either put the files in the app's <code>vendor/</code> folder (run <code>node scripts/fetch-wasm.mjs</code> once) or pick them here – they're saved on this device.</p>
+      <label class="btn ghost">Choose ld.wasm / objcopy.wasm
+        <input id="wasmFiles" type="file" accept=".wasm" multiple hidden>
+      </label>
+      <p id="setupMsg" class="muted"></p>
+    </section>
+
+    <section id="calcCard" class="card" hidden>
+      <div class="row between"><h2 id="calcName">Calculator</h2><button id="refreshCalc" class="link" type="button">Re-read</button></div>
+      <p id="calcSub" class="muted"></p>
+      <div class="bar" aria-hidden="true"><i id="spaceUsed"></i></div>
+      <p id="spaceText" class="muted small"></p>
+      <details><summary>Details</summary><pre id="calcInfo" class="log"></pre><button id="copyInfo" class="link" type="button">Copy</button></details>
+    </section>
+
+    <section id="library">
+      <div class="row between">
+        <h2>NumPlay <span id="relTag" class="tag"></span></h2>
+        <button id="reload" class="link" type="button">Refresh</button>
+      </div>
+      <p id="relNote" class="muted small"></p>
+      <div class="row gap">
+        <button id="saveAll" class="btn ghost small" type="button">Save all offline</button>
+        <div class="chips" id="chips" hidden>
+          <button class="chip on" data-filter="all" type="button">All</button>
+          <button class="chip" data-filter="big" type="button">Big</button>
+          <button class="chip" data-filter="small" type="button">Small</button>
+        </div>
+      </div>
+      <ul id="list" class="list"><li class="muted">Loading…</li></ul>
+    </section>
+
+    <section id="mine">
+      <h2>Your own apps</h2>
+      <label class="btn ghost">Add .nwa files from this device
+        <input id="pickNwa" type="file" accept=".nwa" multiple hidden>
+      </label>
+      <ul id="mineList" class="list"></ul>
+    </section>
+    <div class="spacer"></div>
+  </main>
+
+  <footer id="queueBar" class="queue" hidden>
+    <div><b id="qCount">0 apps</b><span id="qSize" class="muted"></span></div>
+    <button id="review" class="btn primary" type="button">Review &amp; install</button>
+  </footer>
+
+  <dialog id="settings">
+    <div class="sheet-head"><h2>Settings</h2><button id="closeSettings" class="link" type="button">Close</button></div>
+    <label class="switch"><input id="optAll" type="checkbox"><span><b>Show every .nwa file separately</b><br><span class="muted small">Adds single games and other launcher variants. By default only the English, French, Matrices and Hidden NumPlay launchers and the big games are listed.</span></span></label>
+    <p class="muted small">Downloaded files and icons are stored on this device. <button id="clearStore" class="link" type="button">Remove saved files</button></p>
+  </dialog>
+
+  <dialog id="sheet">
+    <div class="sheet-head"><h2>Install</h2><button id="closeSheet" class="link" type="button">Close</button></div>
+    <ul id="qList" class="list"></ul>
+    <div class="bar"><i id="qBar"></i></div>
+    <p id="qSpace" class="muted small"></p>
+    <div class="progress" id="progress" hidden><div class="bar"><i id="pBar"></i></div><p id="stage" class="small"></p></div>
+    <p id="result" class="result" hidden></p>
+    <div class="row gap">
+      <button id="install" class="btn primary" type="button" disabled>Install on calculator</button>
+      <button id="dry" class="btn ghost" type="button" disabled>Dry run</button>
+    </div>
+    <p class="muted small">Installing replaces every app already in the calculator's extra-apps area. Your Python scripts and settings aren't touched. Keep the cable plugged in until it restarts.</p>
+    <details><summary>Log</summary><pre id="log" class="log"></pre><button id="copyLog" class="link" type="button">Copy</button></details>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

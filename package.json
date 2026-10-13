@@ -1,0 +1,2 @@
+{ "name": "numflash", "version": "0.1.0", "private": true, "type": "module",
+  "scripts": { "test": "node test/run-all.mjs", "vendor": "node scripts/extract-vendor.mjs app-loader.js", "wasm": "node scripts/fetch-wasm.mjs" } }
