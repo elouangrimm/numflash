@@ -5,6 +5,13 @@ const API = `https://api.github.com/repos/${REPO}/releases/latest`;
 const CATALOG_KEY = 'numflash.catalog.v1';
 const NWA_CACHE = 'numflash-nwa-v1';
 
+// Curated apps that are hosted outside the NumPlay release.
+const EXTRA_ASSETS = [
+  { id: 'nwagyu-peanutgb-1.2.2', name: 'PeanutGB 1.2.2.nwa', size: 148972, digest: 'sha256:1b63183b9a69c4de67301ab7041746f2821df1dbd2828e2160f0abec1ed47eb0', url: 'https://nwagyu.org/assets/apps/peanutgb-1.2.2.nwa', source: 'Nwagyu' },
+  { id: 'nwagyu-peanutgbc-1.1.1', name: 'PeanutGBC 1.1.1.nwa', size: 142676, digest: 'sha256:25421c773d07a1e354b16c7966fe76f792e2851e8c07ca7fb0a866d18314926c', url: 'https://nwagyu.org/assets/apps/peanutgbc-1.1.1.nwa', source: 'Nwagyu' },
+  { id: 'nwagyu-nofrendo-1.2.3', name: 'Nofrendo 1.2.3.nwa', size: 523540, digest: 'sha256:bd022570395af627006953ad6ee76633b85721878041b762466ba777ab172614', url: 'https://nwagyu.org/assets/apps/nofrendo-1.2.3.nwa', source: 'Nwagyu' },
+];
+
 export const fmtSize = (n) => n >= 1048576 ? (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
 
 /** Latest release, falling back to the last copy we stored. */
@@ -27,7 +34,7 @@ export async function loadCatalog() {
       assets: (rel.assets || []).filter((a) => /\.nwa$/i.test(a.name)).map((a) => ({
         id: a.id, name: a.name, size: a.size, apiUrl: a.url, url: a.browser_download_url,
         digest: a.digest || null, updated: a.updated_at,
-      })),
+      })).concat(EXTRA_ASSETS),
     };
     try { localStorage.setItem(CATALOG_KEY, JSON.stringify(cat)); } catch { /* full */ }
     return cat;

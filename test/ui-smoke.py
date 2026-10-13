@@ -18,6 +18,8 @@ Object.defineProperty(navigator, 'usb', { value: { getDevices: async () => [__m.
 
 names = {1: 'NumPlay_en.nwa', 2: 'NumPlay_fr.nwa', 3: 'NumPlay_matrices.nwa', 4: 'NumPlay_hidden.nwa', 5: 'NumPlay_de.nwa', 6: 'celeste.nwa', 7: 'tetris.nwa'}
 sizes = {1: 300_000, 2: 300_000, 3: 310_000, 4: 305_000, 5: 300_000, 6: 2_600_000, 7: 140_000}
+extra_names = {'peanutgb-1.2.2.nwa': 148_972, 'peanutgbc-1.1.1.nwa': 142_676, 'nofrendo-1.2.3.nwa': 523_540}
+extra_blobs = {name: bytes([(len(name) * 17 + j) & 0xff for j in range(size)]) for name, size in extra_names.items()}
 blobs = {i: bytes([(i * 31 + j) & 0xff for j in range(sizes[i])]) for i in names}
 release = {'tag_name': 'v1.10.0', 'name': 'NumPlay 1.10.0', 'published_at': '2026-10-13T08:00:00Z', 'html_url': 'https://github.com/Mason363/NumPlay/releases/tag/v1.10.0',
   'assets': [{'id': i, 'name': names[i], 'size': len(b), 'url': f'https://api.github.com/repos/Mason363/NumPlay/releases/assets/{i}',
@@ -34,13 +36,16 @@ with sync_playwright() as p:
     page.route('https://api.github.com/repos/Mason363/NumPlay/releases/latest', lambda r: r.fulfill(status=200, content_type='application/json', body=json.dumps(release), headers={'access-control-allow-origin': '*'}))
     def asset(route):
         i = int(route.request.url.rsplit('/', 1)[1]); route.fulfill(status=200, body=blobs[i], headers={'access-control-allow-origin': '*', 'content-type': 'application/octet-stream'})
+    def extra_asset(route):
+        name = route.request.url.rsplit('/', 1)[1]; route.fulfill(status=200, body=extra_blobs[name], headers={'access-control-allow-origin': '*', 'content-type': 'application/octet-stream'})
     page.route(re.compile(r'https://api\.github\.com/repos/Mason363/NumPlay/releases/assets/\d+'), asset)
+    page.route(re.compile(r'https://nwagyu\.org/assets/apps/.+\.nwa'), extra_asset)
     page.on('dialog', lambda d: d.accept())
 
     page.goto('http://localhost:8765/index.html'); page.wait_for_selector('#list .item')
-    # default view: 4 launcher variants + big games only (de + tetris hidden)
-    assert page.locator('#list .item').count() == 5, page.locator('#list .item').count()
-    assert 'hidden' in page.locator('#list li.muted').inner_text() and '2 more' in page.locator('#list li.muted').inner_text()
+    # default view: 4 launchers + 3 curated external apps (de, celeste and tetris hidden)
+    assert page.locator('#list .item').count() == 7, page.locator('#list .item').count()
+    assert 'hidden' in page.locator('#list li.muted').inner_text() and '3 more' in page.locator('#list li.muted').inner_text()
     assert page.locator('#relTag').inner_text() == 'v1.10.0'
     # sorted: NumPlay first, then by size
     first = page.locator('#list .item .name').first.inner_text(); assert first.startswith('NumPlay'), first
@@ -50,18 +55,19 @@ with sync_playwright() as p:
     print('calc:', page.locator('#calcName').inner_text(), '|', page.locator('#calcSub').inner_text())
     # setup banner appears because no wasm is deployed in this checkout
     assert page.locator('#setup').is_visible(); print('setup banner:', page.locator('#missingList').inner_text())
-    # settings: show every file
+    # settings: backdrop closes the sheet, then show every file
+    page.click('#openSettings'); page.mouse.click(10, 10); assert not page.locator('#settings').is_visible()
     page.click('#openSettings'); page.check('#optAll'); page.click('#closeSettings')
-    assert page.locator('#list .item').count() == 7
+    assert page.locator('#list .item').count() == 10
     page.click('[data-filter=big]'); assert page.locator('#list .item').count() == 1
-    page.click('[data-filter=small]'); assert page.locator('#list .item').count() == 6
+    page.click('[data-filter=small]'); assert page.locator('#list .item').count() == 9
     page.click('[data-filter=all]'); page.click('#openSettings'); page.uncheck('#optAll'); page.click('#closeSettings')
-    assert page.locator('#list .item').count() == 5
+    assert page.locator('#list .item').count() == 7
     # add two apps
     page.locator('#list .item .act').nth(0).click(); page.locator('#list .item .act').nth(1).click()
     assert page.locator('#queueBar').is_visible(); print('queue:', page.locator('#qCount').inner_text(), page.locator('#qSize').inner_text())
     # save offline (downloads through the CORS path + sha256 check)
-    page.click('#saveAll'); page.wait_for_function("document.querySelectorAll('#list .badge.ok').length === 5", timeout=15000)
+    page.click('#saveAll'); page.wait_for_function("document.querySelectorAll('#list .badge.ok').length === 7", timeout=15000)
     print('offline badges:', page.locator('#list .badge.ok').count())
     # selection survives a reload
     page.reload(); page.wait_for_selector('#list .item'); page.wait_for_selector('#queueBar:not([hidden])')

@@ -17,16 +17,20 @@ try { meta = JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { /* ig
 const metaKey = (a) => `${S.cat ? S.cat.tag : ''}/${a.name}:${a.size}`;
 const metaOf = (it) => (it.kind === 'asset' ? meta[metaKey(it.asset)] : it.meta) || null;
 
-// Which release files are shown by default: the 4 launcher variants + the big games.
-const VARIANTS = [
+// Keep the main list intentional. Everything else remains available through Settings.
+const DEFAULT_APPS = [
   /(^|[^a-z])(en|eng|english)([^a-z]|$)/i,
   /(^|[^a-z])(fr|fra|french|fran[cç]ais)([^a-z]|$)/i,
   /matri/i,
+  /invisi/i,
+  /numpower/i,
   /hidden/i,
+  /peanutgb/i,
+  /nofrendo/i,
 ];
 function kindOf(a) {
-  if (/numplay/i.test(a.name)) return VARIANTS.some((re) => re.test(a.name)) ? 'launcher' : 'other';
-  return a.size >= BIG ? 'big' : 'other';
+  if (DEFAULT_APPS.some((re) => re.test(a.name))) return /numplay/i.test(a.name) ? 'launcher' : 'featured';
+  return 'other';
 }
 
 const S = {
@@ -159,7 +163,7 @@ function renderLists() {
   list.textContent = '';
   if (!S.cat) return;
   const kinds = S.cat.assets.map(kindOf);
-  const nothingKnown = !kinds.some((k) => k === 'launcher' || k === 'big');
+  const nothingKnown = !kinds.some((k) => k !== 'other');
   const showAll = settings.showAll || nothingKnown;
   $('chips').hidden = !showAll;
   const byName = (a, b) => a.name.localeCompare(b.name);
@@ -169,7 +173,7 @@ function renderLists() {
       .sort((a, b) => (/numplay/i.test(b.name) - /numplay/i.test(a.name)) || b.size - a.size).forEach(add);
     if (nothingKnown) list.append(h('li', { class: 'muted small' }, "I couldn't recognise the launcher names, so everything is shown."));
   } else {
-    const groups = [['NumPlay launchers', 'launcher'], ['Big games', 'big']];
+    const groups = [['NumPlay launchers', 'launcher'], ['Featured apps', 'featured']];
     for (const [title, kind] of groups) {
       const items = S.cat.assets.filter((a) => kindOf(a) === kind).sort(byName);
       if (!items.length) continue;
@@ -177,7 +181,7 @@ function renderLists() {
       items.forEach(add);
     }
     const hidden = S.cat.assets.length - S.cat.assets.filter((a) => kindOf(a) !== 'other').length;
-    if (hidden) list.append(h('li', { class: 'muted small' }, `${hidden} more file${hidden > 1 ? 's' : ''} hidden – see Settings (⚙).`));
+    if (hidden) list.append(h('li', { class: 'muted small' }, `${hidden} more file${hidden > 1 ? 's' : ''} hidden – see Settings.`));
   }
   const mine = $('mineList');
   mine.textContent = '';
@@ -391,6 +395,11 @@ function showResult(ok, text) {
   const r = $('result');
   r.hidden = false; r.className = 'result ' + (ok ? 'ok' : 'bad'); r.textContent = (ok ? '✓ ' : '✗ ') + text;
 }
+function closeOnBackdrop(dialog, canClose = () => true) {
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog && canClose()) dialog.close();
+  });
+}
 
 // ---- wiring --------------------------------------------------------------------------
 async function boot() {
@@ -406,6 +415,7 @@ async function boot() {
   $('optAll').checked = settings.showAll;
   $('openSettings').addEventListener('click', () => $('settings').showModal());
   $('closeSettings').addEventListener('click', () => $('settings').close());
+  closeOnBackdrop($('settings'));
   $('optAll').addEventListener('change', (e) => { settings.showAll = e.target.checked; saveSettings(); renderLists(); });
   $('clearStore').addEventListener('click', async () => {
     if (!confirm('Remove all saved .nwa files and icons from this device?')) return;
@@ -414,6 +424,7 @@ async function boot() {
   $('saveAll').addEventListener('click', saveAllOffline);
   $('review').addEventListener('click', openSheet);
   $('closeSheet').addEventListener('click', () => { if (!S.busy) $('sheet').close(); });
+  closeOnBackdrop($('sheet'), () => !S.busy);
   $('install').addEventListener('click', () => runInstall(false));
   $('dry').addEventListener('click', () => runInstall(true));
   document.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
