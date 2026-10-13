@@ -19,6 +19,7 @@ const metaOf = (it) => (it.kind === 'asset' ? meta[metaKey(it.asset)] : it.meta)
 
 // Keep the main list intentional. Everything else remains available through Settings.
 const DEFAULT_APPS = [
+  /^Numplay(?:\.nwa)?$/i,
   /(^|[^a-z])(en|eng|english)([^a-z]|$)/i,
   /(^|[^a-z])(fr|fra|french|fran[cç]ais)([^a-z]|$)/i,
   /matri/i,
