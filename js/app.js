@@ -1,4 +1,5 @@
 import { Calculator, webUsbAvailable, getKnownCalculators, requestCalculator } from './usb/calculator.js';
+import { readStorageRecords, writeStorageRecords, areRecordsDifferent, mergeRecords } from './usb/storage.js';
 import { NwaApp, wasmReady, regionFromInfos } from './nwa/linker.js';
 import { installApps } from './nwa/installer.js';
 import { loadWasm, importWasmFile } from './wasm-loader.js';
@@ -39,6 +40,7 @@ const S = {
   queue: [],            // items, in install order
   own: [],              // items picked from this device
   stored: new Set(),    // asset names kept offline
+  backedUpRecords: null, // backed up Python & save files before flashing
   busy: false,
 };
 
@@ -96,6 +98,7 @@ async function readCalc(interactive = true) {
       $('spaceText').textContent = errText(e);
     }
     updateQueueBar();
+    await checkAndRestoreSaves();
   } catch (e) {
     S.calc = null;
     setPill('', 'Connect');
@@ -360,10 +363,73 @@ async function openSheet() {
   renderLists(); updateQueueBar(); renderSheet(); refreshButtons();
 }
 
+async function backupSaves() {
+  if (!S.calc) return;
+  try {
+    log('Backing up Python and save files from calculator storage…');
+    const records = await readStorageRecords(S.calc);
+    if (records.length > 0) {
+      S.backedUpRecords = records;
+      try {
+        sessionStorage.setItem('numflash.saves.v1', JSON.stringify(records.map((r) => ({
+          name: r.name,
+          value: Array.from(r.value),
+        }))));
+      } catch { /* ignore */ }
+      log(`Backed up ${records.length} save file(s): ${records.map((r) => r.name).join(', ')}`);
+    } else {
+      log('No save files found in calculator storage.');
+    }
+  } catch (e) {
+    log('Backup notice: ' + errText(e));
+  }
+}
+
+async function checkAndRestoreSaves() {
+  if (!S.calc || S.busy) return;
+  let backedUp = S.backedUpRecords;
+  if (!backedUp) {
+    try {
+      const stored = sessionStorage.getItem('numflash.saves.v1');
+      if (stored) {
+        backedUp = JSON.parse(stored).map((r) => ({
+          name: r.name,
+          value: new Uint8Array(r.value),
+        }));
+      }
+    } catch { /* ignore */ }
+  }
+  if (!backedUp || backedUp.length === 0) return;
+
+  S.busy = true;
+  refreshButtons();
+  try {
+    log('Checking calculator storage for missing Python/save files…');
+    const currentRecords = await readStorageRecords(S.calc);
+    if (areRecordsDifferent(backedUp, currentRecords)) {
+      log('Save files missing or modified after restart! Restoring saved Python and save files…');
+      const merged = mergeRecords(currentRecords, backedUp);
+      await writeStorageRecords(S.calc, merged);
+      log('Restored saved Python and save files successfully ✓');
+      showResult(true, `Restored ${backedUp.length} save file(s) (${backedUp.map((r) => r.name).join(', ')}) automatically.`);
+    } else {
+      log('All saved Python and save files are intact on calculator.');
+    }
+  } catch (e) {
+    log('Save restore warning: ' + errText(e));
+  } finally {
+    S.backedUpRecords = null;
+    try { sessionStorage.removeItem('numflash.saves.v1'); } catch { /* ignore */ }
+    S.busy = false;
+    refreshButtons();
+  }
+}
+
 async function runInstall(dryRun) {
   if (!dryRun && !confirm('This replaces every app currently in the calculator\'s extra-apps area with the ones in this list. Continue?')) return;
   S.busy = true; refreshButtons();
   $('progress').hidden = false; $('result').hidden = true; $('pBar').style.width = '0';
+  if (!dryRun) await backupSaves();
   const apps = S.queue.map((q) => q.app);
   const t0 = performance.now();
   try {
@@ -383,7 +449,16 @@ async function runInstall(dryRun) {
       showResult(true, `Installed ${apps.length} app${apps.length > 1 ? 's' : ''} in ${secs}s. The calculator is restarting – open the Apps screen to find them.`);
       log(`Installed OK in ${secs}s`);
       S.calc = new Calculator(S.calc.device);        // old session is gone after the restart
-      setTimeout(async () => { S.calc = null; $('calcCard').hidden = true; setPill('', 'Connect'); await connect(false); }, 4000);
+      const tryReconnect = async (attemptsLeft) => {
+        S.calc = null;
+        $('calcCard').hidden = true;
+        setPill('', 'Connect');
+        const ok = await connect(false);
+        if (!ok && attemptsLeft > 0) {
+          setTimeout(() => tryReconnect(attemptsLeft - 1), 2000);
+        }
+      };
+      setTimeout(() => tryReconnect(3), 3500);
     }
   } catch (e) {
     showResult(false, errText(e));
