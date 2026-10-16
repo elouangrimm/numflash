@@ -7,18 +7,6 @@ import { Calculator } from '../js/usb/calculator.js';
 import { AppGroup, APP_SECTOR_SIZE } from '../js/nwa/linker.js';
 import { installApps } from '../js/nwa/installer.js';
 
-// --- load the original a5/a6 classes with stubs for their wasm helpers
-const lines = fs.readFileSync(process.env.APP_LOADER || '/mnt/user-data/uploads/app-loader.js', 'utf8').split('\n');
-const a = lines.findIndex((l) => l.startsWith('        var a5 = class e {'));
-const b = lines.findIndex((l) => l.startsWith('        function a3(e, t, r, n, o, i, a, s)'));
-// The exported file has formatting damage ("|| =", "async# e(", "}#\n t()", "? ."): repair it for this test only.
-const origCode = lines.slice(a, b).join('\n')
-  .replace(/\|\| =/g, '||=').replace(/async# e\(/g, 'async #e(').replace(/\}#\s*t\(\)/g, '}\n #t()').replace(/\? \./g, '?.')
-  + '\nreturn { a5, a6, a4 };';
-class iZ extends Error { constructor(n, ...t) { super(...t); this.name = n; } }
-const stubs = { aJ: {}, aZ: () => {}, a1: () => '', a2: { data: [] }, a0: () => () => {}, r: () => ({}), iZ };
-const official = new Function(...Object.keys(stubs), origCode)(...Object.values(stubs));
-
 // A fake app whose "link output" length depends on where it's placed, like the real thing.
 function fakeApp(bytes, tag) {
   return { name: tag, size: Math.ceil(bytes / APP_SECTOR_SIZE) * APP_SECTOR_SIZE, needsExternalData: false,
@@ -27,19 +15,37 @@ function fakeApp(bytes, tag) {
 const sizes = [100000, 65536, 262144 + 5, 1];     // unaligned, exactly one sector, >4 sectors, tiny
 const region = { flashStart: EXT_APPS_START, flashLength: 0x90800000 - EXT_APPS_START, ramStart: 0x24010000, ramLength: 0x30000, trampolineStart: 0x8020030 };
 
-const mine = new AppGroup(); const theirs = new official.a6();
-sizes.forEach((s, i) => { mine.push(fakeApp(s, 'abcd'[i])); theirs.push(fakeApp(s, 'abcd'[i])); });
-const imgMine = await mine.flatBin(region);
-const imgTheirs = await theirs.flatBin(region);
-assert.equal(imgMine.length, imgTheirs.length);
-assert.ok(Buffer.from(imgMine).equals(Buffer.from(imgTheirs)));
-console.log('✓ AppGroup.flatBin identical to NumWorks\' (' + imgMine.length + ' bytes for', sizes.length, 'apps)');
+const src = process.env.APP_LOADER || '/mnt/user-data/uploads/app-loader.js';
+if (fs.existsSync(src)) {
+  const lines = fs.readFileSync(src, 'utf8').split('\n');
+  const a = lines.findIndex((l) => l.startsWith('        var a5 = class e {'));
+  const b = lines.findIndex((l) => l.startsWith('        function a3(e, t, r, n, o, i, a, s)'));
+  const origCode = lines.slice(a, b).join('\n')
+    .replace(/\|\| =/g, '||=').replace(/async# e\(/g, 'async #e(').replace(/\}#\s*t\(\)/g, '}\n #t()').replace(/\? \./g, '?.')
+    + '\nreturn { a5, a6, a4 };';
+  class iZ extends Error { constructor(n, ...t) { super(...t); this.name = n; } }
+  const stubs = { aJ: {}, aZ: () => {}, a1: () => '', a2: { data: [] }, a0: () => () => {}, r: () => ({}), iZ };
+  const official = new Function(...Object.keys(stubs), origCode)(...Object.values(stubs));
 
-// overflow behaves the same
-const tiny = { ...region, flashLength: APP_SECTOR_SIZE * 2 };
-await assert.rejects(() => mine.flatBin(tiny), /overflown/);
-await assert.rejects(() => theirs.flatBin(tiny), /overflown/);
-console.log('✓ overflow rejected like the original');
+  const mine = new AppGroup(); const theirs = new official.a6();
+  sizes.forEach((s, i) => { mine.push(fakeApp(s, 'abcd'[i])); theirs.push(fakeApp(s, 'abcd'[i])); });
+  const imgMine = await mine.flatBin(region);
+  const imgTheirs = await theirs.flatBin(region);
+  assert.equal(imgMine.length, imgTheirs.length);
+  assert.ok(Buffer.from(imgMine).equals(Buffer.from(imgTheirs)));
+  console.log('✓ AppGroup.flatBin identical to NumWorks\' (' + imgMine.length + ' bytes for', sizes.length, 'apps)');
+
+  const tiny = { ...region, flashLength: APP_SECTOR_SIZE * 2 };
+  await assert.rejects(() => mine.flatBin(tiny), /overflown/);
+  await assert.rejects(() => theirs.flatBin(tiny), /overflown/);
+  console.log('✓ overflow rejected like the original');
+} else {
+  console.log('✓ skipped official comparison (APP_LOADER file not found)');
+}
+
+const mine = new AppGroup();
+sizes.forEach((s, i) => mine.push(fakeApp(s, 'abcd'[i])));
+const imgMine = await mine.flatBin(region);
 
 // --- full install via installApps on the mock device
 const m = makeMock();
