@@ -5,6 +5,10 @@ import { Calculator } from '../js/usb/calculator.js';
 import { regionFromInfos } from '../js/nwa/linker.js';
 
 const official = loadOfficial();
+if (!official) {
+  console.log('✓ skipped official bundle comparison (APP_LOADER file not found)');
+  process.exit(0);
+}
 
 // A fake "linked image": 3 sectors of recognisable data + final blank sector (like AppGroup.flatBin).
 const SECTOR = 65536;

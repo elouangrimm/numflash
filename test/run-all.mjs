@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 let bad = 0;
-for (const t of ['diff-vs-official', 'installer-diff', 'safety', 'glue-boot']) {
+for (const t of ['diff-vs-official', 'installer-diff', 'safety', 'glue-boot', 'storage']) {
   console.log('\n== ' + t);
   const r = spawnSync(process.execPath, [new URL(`./${t}.mjs`, import.meta.url).pathname], { stdio: 'inherit' });
   if (r.status) bad++;
