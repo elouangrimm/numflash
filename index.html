@@ -13,7 +13,7 @@
 </head>
 <body>
   <header class="top">
-    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>NumFlash</span><span class="version">v0.1.2</span></div>
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>NumFlash</span><span class="version">v0.1.3</span></div>
     <div class="row gap"><button id="openSettings" class="settings-trigger" type="button">Settings</button><button id="connect" class="pill" type="button"><span class="dot"></span><span id="connectLabel">Connect</span></button></div>
   </header>
 
@@ -75,6 +75,7 @@
   <dialog id="settings">
     <div class="sheet-head"><div><p class="eyebrow">LIBRARY</p><h2>Settings</h2></div><button id="closeSettings" class="link" type="button">Done</button></div>
     <label class="switch"><input id="optAll" type="checkbox"><span><b>Show the full catalog</b><br><span class="muted small">Include every .nwa file from NumPlay, including alternate launchers and smaller games.</span></span></label>
+    <label class="switch"><input id="optBackup" type="checkbox"><span><b>Back up saves before installing</b><br><span class="muted small">Copies your Python scripts and game saves from the calculator first, and puts them back if they disappear.</span></span></label>
     <div class="storage-row"><span><b>Offline storage</b><br><span class="muted small">Downloaded apps and icons stay on this device.</span></span><button id="clearStore" class="btn ghost small" type="button">Clear saved files</button></div>
   </dialog>
 

@@ -31,6 +31,15 @@ const DFUSE_ERASE_PAGE = 0x41;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// A USB transfer that the device never answers would otherwise wait forever (no error, no log).
+const TRANSFER_TIMEOUT_MS = 15000;
+const POLL_DEADLINE_MS = 60000;
+function withTimeout(promise, ms, what) {
+  let t;
+  const timer = new Promise((_, rej) => { t = setTimeout(() => rej(new Error(what + ' timed out after ' + ms / 1000 + 's (the calculator stopped answering)')), ms); });
+  return Promise.race([promise, timer]).finally(() => clearTimeout(t));
+}
+
 export class DFU {
   constructor(device, transferSize = 2048) {
     this.device = device;
@@ -42,10 +51,10 @@ export class DFU {
   async requestIn(request, length, value = 0) {
     let res;
     try {
-      res = await this.device.controlTransferIn({
+      res = await withTimeout(this.device.controlTransferIn({
         requestType: 'class', recipient: 'interface', request, value,
         index: this.settings.interface.interfaceNumber,
-      }, length);
+      }, length), TRANSFER_TIMEOUT_MS, 'USB read');
     } catch (e) { throw new Error('ControlTransferIn failed --> ' + e); }
     if (res.status !== 'ok') throw new Error('Wrong requestIn status: ' + res.status);
     return res.data;
@@ -54,10 +63,10 @@ export class DFU {
   async requestOut(request, data, value = 0) {
     let res;
     try {
-      res = await this.device.controlTransferOut({
+      res = await withTimeout(this.device.controlTransferOut({
         requestType: 'class', recipient: 'interface', request, value,
         index: this.settings.interface.interfaceNumber,
-      }, data);
+      }, data), TRANSFER_TIMEOUT_MS, 'USB write');
     } catch (e) { throw new Error('ControlTransferOut failed --> ' + e); }
     if (res.status !== 'ok') throw new Error('Wrong requestOut status: ' + res.status);
     return res.bytesWritten;
@@ -97,7 +106,9 @@ export class DFU {
       let st = await this.getStatus();
       if (st.status !== 0) throw 'Status is ' + st.status + ' instead of Status OK (0).';
       const delay = fixedDelay != null ? fixedDelay : st.pollTimeout;
+      const deadline = Date.now() + POLL_DEADLINE_MS;
       while (!predicate(st.state) && st.state !== STATE_ERROR) {
+        if (Date.now() > deadline) throw 'the calculator stayed in DFU state ' + st.state + ' for ' + POLL_DEADLINE_MS / 1000 + 's';
         await sleep(delay);
         st = await this.getStatus();
         if (st.status !== 0) throw 'Status is ' + st.status + ' instead of Status OK (0).';
@@ -113,10 +124,14 @@ export class DFU {
     v.setUint32(1, address, true);
     try {
       let st;
-      do {
+      for (let attempt = 0; ; attempt++) {
         await this.requestOut(REQ_DNLOAD, buf, 0);
         st = await this.pollUntil((s) => s !== STATE_DNBUSY, 0);
-      } while (st.state !== STATE_DNLOAD_IDLE);
+        if (st.state === STATE_DNLOAD_IDLE) break;
+        // Used to loop forever when the device went to the error state (e.g. an address the
+        // selected memory does not have). Fail loudly instead.
+        if (st.state === STATE_ERROR || attempt >= 20) throw 'device answered with DFU state ' + st.state + ' (status ' + st.status + ')';
+      }
     } catch (e) { throw new Error('Set address to ' + address + ' failed --> ' + e); }
   }
 
@@ -156,7 +171,7 @@ export class DFU {
       const dev = this.device;
       const ctl = async (setup, length, what) => {
         let r;
-        try { r = await dev.controlTransferIn(setup, length); }
+        try { r = await withTimeout(dev.controlTransferIn(setup, length), TRANSFER_TIMEOUT_MS, what); }
         catch (e) { throw new Error(what + ' failed --> ' + e); }
         if (r.status !== 'ok') throw new Error('Wrong ' + what + ' status: ' + r.status);
         return r.data;
@@ -220,10 +235,10 @@ export class DFU {
       do {
         const n = Math.min(this.transferSize, length - got);
         const data = await this.requestIn(REQ_UPLOAD, n, block++);
-        if (data.byteLength > 0) {
-          out.set(new Uint8Array(data.buffer, data.byteOffset, data.byteLength), got);
-          got += data.byteLength;
-        }
+        // An empty answer means "nothing more to send". Looping on it never ends, so stop here.
+        if (data.byteLength === 0) throw new Error('the calculator returned no data after ' + got + ' of ' + length + ' bytes (wrong memory area?)');
+        out.set(new Uint8Array(data.buffer, data.byteOffset, Math.min(data.byteLength, length - got)), got);
+        got += Math.min(data.byteLength, length - got);
         if (onProgress) onProgress(got / length);
       } while (got < length);
       await this.abortToIdle();
@@ -278,11 +293,13 @@ export class DFU {
       v.setUint8(0, DFUSE_ERASE_PAGE);
       v.setUint32(1, address, true);
       let st;
-      do {
+      for (let attempt = 0; ; attempt++) {
         await this.requestOut(REQ_DNLOAD, buf, 0);
         st = await this.getStatus();
         if (st.status !== 0) throw 'wrong DFU status: ' + st.status;
-      } while (st.state !== STATE_DNBUSY);
+        if (st.state === STATE_DNBUSY) break;
+        if (attempt >= 20) throw 'the calculator never started erasing (state ' + st.state + ')';
+      }
       st = await this.pollUntil((s) => s !== STATE_DNBUSY);
       if (st.status !== 0) throw 'wrong DFU status: ' + st.status;
     } catch (e) {

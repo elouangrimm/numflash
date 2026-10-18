@@ -1,178 +1,105 @@
-// NumWorks Epsilon Storage utilities: parsing, encoding, reading, and writing records.
+// NumWorks Epsilon storage (Python scripts, saves, ...): read, parse, encode, write.
+//
+// Layout in the calculator's RAM, as used by NumWorks' own tools (nwlink, numworks.js):
+//
+//   storageAddress ........ 0xBA 0xDD 0x0B 0xEE   (start tag)
+//   storageAddress + 4 .... record, record, ... , 0x00 0x00, zero padding (storageSize bytes)
+//   storageAddress + 4 + storageSize ... 0xBA 0xDD 0x0B 0xEE   (end tag)
+//
+// NumWorks reads (storageAddress, storageSize + 8) with the RAM alternate setting (alt 1)
+// and writes the record area back at storageAddress + 4. A record is:
+//
+//   uint16 LE  TOTAL record size (these two bytes + name + 0 + value)
+//   name       null-terminated, includes the extension ("numplay.py")
+//   value      raw bytes
+//
+// Reading it with the flash alternate setting (alt 0) never works: the calculator answers
+// with empty data, which used to make the install hang on "Backing up saves".
 
-/** Check if a string looks like a valid record name (e.g. "numplay_saves.py", "code.py", "data.csv") */
-export function isValidRecordName(name) {
-  if (!name || typeof name !== 'string' || name.length > 128) return false;
-  // Non-control printable characters, must contain a dot extension
-  return /^[\w\-. ]+$/i.test(name) && name.includes('.') && !name.startsWith('.') && !name.endsWith('.');
-}
+const TAG = Uint8Array.of(0xBA, 0xDD, 0x0B, 0xEE);
+const same = (a, off, b) => { for (let i = 0; i < b.length; i++) if (a[off + i] !== b[i]) return false; return true; };
 
-/** Parse records from a raw Storage Uint8Array buffer */
-export function parseStorageRecords(buffer) {
+/** Parse the record area (between the two tags). Throws if it is not well formed. */
+export function parseStorageRecords(area) {
   const records = [];
-  if (!buffer) return records;
-  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer.buffer || buffer, buffer.byteOffset || 0, buffer.byteLength || 0);
-  let offset = 0;
-  const len = bytes.length;
-
-  while (offset + 2 <= len) {
-    const b0 = bytes[offset];
-    const b1 = bytes[offset + 1];
-
-    // End of records marker in Flash (0xFFFF) or empty RAM (0x0000)
-    if ((b0 === 0x00 && b1 === 0x00) || (b0 === 0xff && b1 === 0xff)) {
-      break;
-    }
-
-    // Layout 1: uint16_t valueSize LE, followed by null-terminated string fullName, followed by value bytes
-    const valueSize = b0 | (b1 << 8);
-    let nullIdx = -1;
-    const maxSearch = Math.min(len, offset + 2 + 256);
-    for (let i = offset + 2; i < maxSearch; i++) {
-      if (bytes[i] === 0) {
-        nullIdx = i;
-        break;
-      }
-    }
-
-    if (nullIdx !== -1) {
-      const nameBytes = bytes.subarray(offset + 2, nullIdx);
-      const name = new TextDecoder('utf-8', { fatal: false }).decode(nameBytes);
-      const valueStart = nullIdx + 1;
-      const valueEnd = valueStart + valueSize;
-
-      if (valueEnd <= len && isValidRecordName(name)) {
-        const value = bytes.slice(valueStart, valueEnd);
-        records.push({ name, value });
-        offset = valueEnd;
-        continue;
-      }
-    }
-
-    // Fallback Layout 2: null-terminated string fullName, followed by uint16_t valueSize LE, followed by value bytes
-    let nullIdx2 = -1;
-    const maxSearch2 = Math.min(len, offset + 256);
-    for (let i = offset; i < maxSearch2; i++) {
-      if (bytes[i] === 0) {
-        nullIdx2 = i;
-        break;
-      }
-    }
-
-    if (nullIdx2 > offset && nullIdx2 + 2 <= len) {
-      const nameBytes = bytes.subarray(offset, nullIdx2);
-      const name = new TextDecoder('utf-8', { fatal: false }).decode(nameBytes);
-      const valSize = bytes[nullIdx2 + 1] | (bytes[nullIdx2 + 2] << 8);
-      const valStart = nullIdx2 + 3;
-      const valEnd = valStart + valSize;
-
-      if (valEnd <= len && isValidRecordName(name)) {
-        const value = bytes.slice(valStart, valEnd);
-        records.push({ name, value });
-        offset = valEnd;
-        continue;
-      }
-    }
-
-    offset++;
+  const dec = new TextDecoder('utf-8');
+  let off = 0;
+  while (off + 2 <= area.length) {
+    const size = area[off] | (area[off + 1] << 8);
+    if (size === 0) return records;                        // end marker
+    if (size < 4 || off + size > area.length) throw new Error('storage record at ' + off + ' has a bad size (' + size + ')');
+    const rec = area.subarray(off + 2, off + size);
+    const z = rec.indexOf(0);
+    if (z <= 0) throw new Error('storage record at ' + off + ' has no name');
+    records.push({ name: dec.decode(rec.subarray(0, z)), value: rec.slice(z + 1) });
+    off += size;
   }
-
   return records;
 }
 
-/** Encode an array of record objects [{ name, value }] into a Uint8Array of storageSize */
-export function encodeStorageRecords(records, storageSize, fillByte = 0x00) {
-  const out = new Uint8Array(storageSize).fill(fillByte);
-  let offset = 0;
-  const encoder = new TextEncoder();
-
-  for (const rec of records) {
-    if (!rec || !rec.name) continue;
-    const valBytes = typeof rec.value === 'string'
-      ? encoder.encode(rec.value)
-      : (rec.value ? new Uint8Array(rec.value.buffer || rec.value, rec.value.byteOffset || 0, rec.value.byteLength) : new Uint8Array(0));
-    const nameBytes = encoder.encode(rec.name);
-    const recLen = 2 + nameBytes.length + 1 + valBytes.length;
-
-    if (offset + recLen > storageSize) {
-      console.warn(`Storage limit reached (${storageSize} bytes), skipping record ${rec.name}`);
-      break;
-    }
-
-    // Write uint16_t valueSize
-    out[offset] = valBytes.length & 0xff;
-    out[offset + 1] = (valBytes.length >> 8) & 0xff;
-    offset += 2;
-
-    // Write name + null terminator
-    out.set(nameBytes, offset);
-    offset += nameBytes.length;
-    out[offset] = 0x00;
-    offset += 1;
-
-    // Write value
-    out.set(valBytes, offset);
-    offset += valBytes.length;
+/** Encode records into a record area of exactly `size` bytes (zero padded). */
+export function encodeStorageRecords(records, size) {
+  const out = new Uint8Array(size);
+  const enc = new TextEncoder();
+  let off = 0;
+  for (const r of records) {
+    const name = enc.encode(r.name);
+    const value = r.value instanceof Uint8Array ? r.value : enc.encode(String(r.value ?? ''));
+    const total = 2 + name.length + 1 + value.length;
+    if (total > 0xffff || off + total + 2 > size) throw new Error('Not enough room in the calculator storage for ' + r.name);
+    out[off] = total & 0xff; out[off + 1] = total >> 8;
+    out.set(name, off + 2);
+    out.set(value, off + 2 + name.length + 1);
+    off += total;
   }
-
   return out;
 }
 
-/** Compare two record sets. Returns true if any backed up record is missing or has different bytes in current. */
+/** True if any backed-up record is missing from `current` or has different bytes. */
 export function areRecordsDifferent(backedUp, current) {
   if (!backedUp || backedUp.length === 0) return false;
-  const currMap = new Map();
-  for (const r of current || []) currMap.set(r.name, r.value);
-
+  const cur = new Map((current || []).map((r) => [r.name, r.value]));
   for (const b of backedUp) {
-    const currVal = currMap.get(b.name);
-    if (!currVal) return true; // Missing in current
-    if (currVal.length !== b.value.length) return true; // Size difference
-    for (let i = 0; i < currVal.length; i++) {
-      if (currVal[i] !== b.value[i]) return true; // Byte difference
-    }
+    const v = cur.get(b.name);
+    if (!v || v.length !== b.value.length) return true;
+    for (let i = 0; i < v.length; i++) if (v[i] !== b.value[i]) return true;
   }
   return false;
 }
 
-/** Merge backedUp records into current records, preferring backedUp for any duplicates */
+/** Current records plus the backed-up ones (the backup wins for the same name). */
 export function mergeRecords(current, backedUp) {
   const map = new Map();
   for (const r of current || []) map.set(r.name, r);
   for (const b of backedUp || []) map.set(b.name, b);
-  return Array.from(map.values());
+  return [...map.values()];
 }
 
-/** Read all storage records from a Calculator instance */
-export async function readStorageRecords(calc) {
-  if (!calc || !calc.infos || !calc.infos.firmware) return [];
-  const fw = calc.infos.firmware;
-  const addr = fw.storageAddress;
-  const size = fw.storageSize;
-  if (!addr || addr === 'unknown' || !size || typeof size !== 'number' || size <= 0) return [];
-
-  const raw = await calc.process(async (c) => {
-    return await c.dfu.upload(addr, size);
-  });
-  return parseStorageRecords(raw);
+function storageRegion(calc) {
+  const fw = calc && calc.infos && calc.infos.firmware;
+  if (!fw) throw new Error('Calculator info not loaded');
+  const address = fw.storageAddress, size = fw.storageSize;
+  if (typeof address !== 'number' || typeof size !== 'number' || !(size > 0)) throw new Error('This calculator did not report where its storage is');
+  const m = calc.infos.model;
+  // Storage lives in RAM; refuse anything else rather than touching flash by mistake.
+  if (!(m.RAMAddressStart >= 0 && address >= m.RAMAddressStart && address + size + 2 * TAG.length <= m.RAMAddressEnd))
+    throw new Error('Storage address 0x' + address.toString(16) + ' is outside the calculator RAM');
+  return { address, size };
 }
 
-/** Write an array of record objects to a Calculator instance's storage address */
+/** Read all storage records from the calculator (opens/closes the USB device itself). */
+export async function readStorageRecords(calc, onProgress) {
+  const { address, size } = storageRegion(calc);
+  const raw = await calc.process((c) => c.dfu.upload(address, size + 2 * TAG.length, onProgress, 1));
+  if (!same(raw, 0, TAG) || !same(raw, raw.length - TAG.length, TAG))
+    throw new Error('Calculator memory does not look like storage (tags not found)');
+  return parseStorageRecords(raw.subarray(TAG.length, TAG.length + size));
+}
+
+/** Write records back to the calculator's RAM storage. */
 export async function writeStorageRecords(calc, records) {
-  if (!calc || !calc.infos || !calc.infos.firmware) throw new Error('Calculator info not loaded');
-  const fw = calc.infos.firmware;
-  const addr = fw.storageAddress;
-  const size = fw.storageSize;
-  if (!addr || addr === 'unknown' || !size || typeof size !== 'number' || size <= 0) throw new Error('Storage region unknown');
-
-  const encoded = encodeStorageRecords(records, size);
-
-  await calc.process(async (c) => {
-    const isFlash = (addr >= 0x08000000 && addr < 0x08200000) || (addr >= 0x90000000 && addr < 0x98000000);
-    if (isFlash) {
-      await c.downloadFlash(addr, encoded);
-    } else {
-      await c.dfu.download(addr, encoded);
-    }
-  });
+  const { address, size } = storageRegion(calc);
+  const area = encodeStorageRecords(records, size);
+  // Same as NumWorks: the data goes to address + tag length, RAM alternate setting.
+  await calc.process((c) => c.dfu.download(address + TAG.length, area, undefined, 1));
 }

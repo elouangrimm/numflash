@@ -1,10 +1,10 @@
 // App-shell cache so NumFlash opens offline. Release files and the wasm tools are
 // stored separately (Cache Storage keys used by the page itself).
-const SHELL = 'numflash-shell-v1';
+const SHELL = 'numflash-shell-v2';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/catalog.js', 'js/wasm-loader.js',
-  'js/usb/dfu.js', 'js/usb/calculator.js',
+  'js/usb/dfu.js', 'js/usb/calculator.js', 'js/usb/storage.js',
   'js/nwa/linker.js', 'js/nwa/installer.js', 'js/nwa/lz4.js',
   'js/vendor/ld-glue.js', 'js/vendor/objcopy-glue.js', 'js/vendor/eadk-o.js', 'js/vendor/linker-script.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

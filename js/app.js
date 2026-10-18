@@ -11,7 +11,7 @@ const SEL_KEY = 'numflash.selected.v1';
 const SET_KEY = 'numflash.settings.v1';
 const META_KEY = 'numflash.meta.v1';      // { "<tag>/<file>:<size>": { name, icon } }
 
-const settings = (() => { try { return { showAll: false, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch { return { showAll: false }; } })();
+const settings = (() => { try { return { showAll: false, backup: true, ...JSON.parse(localStorage.getItem(SET_KEY) || '{}') }; } catch { return { showAll: false, backup: true }; } })();
 const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch { /* ignore */ } };
 let meta = {};
 try { meta = JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { /* ignore */ }
@@ -363,25 +363,28 @@ async function openSheet() {
   renderLists(); updateQueueBar(); renderSheet(); refreshButtons();
 }
 
+/** Copies the calculator's Python/save records to this device. Returns { ok, count, error }. */
 async function backupSaves() {
-  if (!S.calc) return;
+  if (!S.calc) return { ok: false, count: 0, error: 'not connected' };
   try {
     log('Backing up Python and save files from calculator storage…');
-    const records = await readStorageRecords(S.calc);
-    if (records.length > 0) {
-      S.backedUpRecords = records;
+    $('stage').textContent = 'Backing up saves…';
+    const records = await readStorageRecords(S.calc, (p) => { $('pBar').style.width = (p * 10).toFixed(1) + '%'; });
+    S.backedUpRecords = records.length ? records : null;
+    if (records.length) {
       try {
-        sessionStorage.setItem('numflash.saves.v1', JSON.stringify(records.map((r) => ({
-          name: r.name,
-          value: Array.from(r.value),
-        }))));
+        sessionStorage.setItem('numflash.saves.v1', JSON.stringify(records.map((r) => ({ name: r.name, value: Array.from(r.value) }))));
       } catch { /* ignore */ }
-      log(`Backed up ${records.length} save file(s): ${records.map((r) => r.name).join(', ')}`);
+      log(`Backed up ${records.length} file(s): ${records.map((r) => r.name).join(', ')}`);
     } else {
       log('No save files found in calculator storage.');
     }
+    $('pBar').style.width = '0';
+    return { ok: true, count: records.length };
   } catch (e) {
-    log('Backup notice: ' + errText(e));
+    log('Backup failed: ' + errText(e));
+    $('pBar').style.width = '0';
+    return { ok: false, count: 0, error: errText(e) };
   }
 }
 
@@ -429,10 +432,17 @@ async function runInstall(dryRun) {
   if (!dryRun && !confirm('This replaces every app currently in the calculator\'s extra-apps area with the ones in this list. Continue?')) return;
   S.busy = true; refreshButtons();
   $('progress').hidden = false; $('result').hidden = true; $('pBar').style.width = '0';
-  if (!dryRun) await backupSaves();
   const apps = S.queue.map((q) => q.app);
   const t0 = performance.now();
   try {
+    if (!dryRun && settings.backup) {
+      const b = await backupSaves();
+      if (!b.ok && !confirm('Could not back up your saves and Python scripts:\n\n' + b.error + '\n\nInstall anyway? Anything stored on the calculator might be lost.')) {
+        $('stage').textContent = 'Cancelled.';
+        showResult(false, 'Cancelled before anything was written. ' + b.error);
+        return;
+      }
+    }
     const res = await installApps(S.calc, apps, {
       dryRun,
       onStage: (t) => { $('stage').textContent = t; log(t); },
@@ -489,6 +499,8 @@ async function boot() {
   $('copyLog').addEventListener('click', () => copy($('log').textContent));
   $('reload').addEventListener('click', loadLibrary);
   $('optAll').checked = settings.showAll;
+  $('optBackup').checked = settings.backup;
+  $('optBackup').addEventListener('change', (e) => { settings.backup = e.target.checked; saveSettings(); });
   $('openSettings').addEventListener('click', () => $('settings').showModal());
   $('closeSettings').addEventListener('click', () => $('settings').close());
   closeOnBackdrop($('settings'));
