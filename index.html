@@ -13,8 +13,8 @@
 </head>
 <body>
   <header class="top">
-    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>NumFlash</span><span class="version">v0.1.3</span></div>
-    <div class="row gap"><button id="openSettings" class="settings-trigger" type="button">Settings</button><button id="connect" class="pill" type="button"><span class="dot"></span><span id="connectLabel">Connect</span></button></div>
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>NumFlash</span><span class="version">v0.2.0</span></div>
+    <button id="connect" class="pill" type="button"><span class="dot"></span><span id="connectLabel">Connect</span></button>
   </header>
 
   <main>
@@ -32,38 +32,51 @@
       <p id="setupMsg" class="muted"></p>
     </section>
 
-    <section id="calcCard" class="card" hidden>
-      <div class="row between"><h2 id="calcName">Calculator</h2><button id="refreshCalc" class="link" type="button">Re-read</button></div>
-      <p id="calcSub" class="muted"></p>
-      <div class="bar" aria-hidden="true"><i id="spaceUsed"></i></div>
-      <p id="spaceText" class="muted small"></p>
-      <details><summary>Details</summary><pre id="calcInfo" class="log"></pre><button id="copyInfo" class="link" type="button">Copy</button></details>
+    <section id="calcCard" class="card">
+      <div class="row between"><h2 id="calcName">No calculator connected</h2><button id="refreshCalc" class="link" type="button" hidden>Re-read</button></div>
+      <p id="calcSub" class="muted">Plug it in, turn it on, then tap Connect.</p>
+      <p id="nowOn" class="now" hidden></p>
+      <div id="spaceBox" hidden>
+        <div class="bar" aria-hidden="true"><i id="spaceUsed"></i></div>
+        <p id="spaceText" class="muted small"></p>
+      </div>
+      <button id="connectBig" class="btn primary" type="button">Connect calculator</button>
+      <details id="calcDetails" hidden><summary>Details</summary><pre id="calcInfo" class="log"></pre><button id="copyInfo" class="link" type="button">Copy</button></details>
     </section>
 
     <section id="library">
       <div class="row between">
-        <h2>NumPlay <span id="relTag" class="tag"></span></h2>
+        <h2>Switch app</h2>
         <button id="reload" class="link" type="button">Refresh</button>
       </div>
-      <p id="relNote" class="muted small"></p>
-      <div class="row gap">
-        <button id="saveAll" class="btn ghost small" type="button">Save all offline</button>
-        <div class="chips" id="chips" hidden>
-          <button class="chip on" data-filter="all" type="button">All</button>
-          <button class="chip" data-filter="big" type="button">Big</button>
-          <button class="chip" data-filter="small" type="button">Small</button>
-        </div>
-      </div>
+      <p class="muted small">The calculator holds one big app at a time. Tap <b>Switch</b> to replace what's on it. <span id="relNote"></span></p>
       <ul id="list" class="list"><li class="muted">Loading…</li></ul>
+
+      <button id="moreBtn" class="btn ghost wide" type="button" aria-expanded="false">More apps &amp; versions</button>
+      <div id="more" hidden>
+        <h3>Small apps</h3>
+        <p class="muted small">These fit next to a big app. Add as many as you like, then install.</p>
+        <ul id="smallList" class="list"></ul>
+        <h3>Other NumPlay versions</h3>
+        <ul id="variantList" class="list"></ul>
+        <h3>Your own files</h3>
+        <label class="btn ghost">Add .nwa files from this device
+          <input id="pickNwa" type="file" accept=".nwa" multiple hidden>
+        </label>
+        <ul id="mineList" class="list"></ul>
+      </div>
+      <div class="row gap offline-row">
+        <button id="saveAll" class="btn ghost small" type="button">Save big apps offline</button>
+        <span id="offlineNote" class="muted small"></span>
+      </div>
     </section>
 
-    <section id="mine">
-      <h2>Your own apps</h2>
-      <label class="btn ghost">Add .nwa files from this device
-        <input id="pickNwa" type="file" accept=".nwa" multiple hidden>
-      </label>
-      <ul id="mineList" class="list"></ul>
+    <section id="savesCard" class="card">
+      <div class="row between"><h2>Saves</h2><button id="openSaves" class="btn ghost small" type="button">Open</button></div>
+      <p id="savesSummary" class="muted small">Your game saves and Python scripts are copied to this device each time you connect, so a crash or reset can't take them.</p>
     </section>
+
+    <footer class="foot"><button id="openSettings" class="link" type="button">Settings</button></footer>
     <div class="spacer"></div>
   </main>
 
@@ -73,10 +86,27 @@
   </footer>
 
   <dialog id="settings">
-    <div class="sheet-head"><div><p class="eyebrow">LIBRARY</p><h2>Settings</h2></div><button id="closeSettings" class="link" type="button">Done</button></div>
-    <label class="switch"><input id="optAll" type="checkbox"><span><b>Show the full catalog</b><br><span class="muted small">Include every .nwa file from NumPlay, including alternate launchers and smaller games.</span></span></label>
-    <label class="switch"><input id="optBackup" type="checkbox"><span><b>Back up saves before installing</b><br><span class="muted small">Copies your Python scripts and game saves from the calculator first, and puts them back if they disappear.</span></span></label>
-    <div class="storage-row"><span><b>Offline storage</b><br><span class="muted small">Downloaded apps and icons stay on this device.</span></span><button id="clearStore" class="btn ghost small" type="button">Clear saved files</button></div>
+    <div class="sheet-head"><div><p class="eyebrow">NUMFLASH</p><h2>Settings</h2></div><button id="closeSettings" class="link" type="button">Done</button></div>
+    <label class="switch"><input id="optBackup" type="checkbox"><span><b>Back up saves before installing</b><br><span class="muted small">Copies your Python scripts and game saves from the calculator first, and offers to put them back if they disappear.</span></span></label>
+    <div class="storage-row"><span><b>Offline apps</b><br><span class="muted small">Downloaded apps stay on this device.</span></span><button id="clearStore" class="btn ghost small" type="button">Clear apps</button></div>
+    <div class="storage-row"><span><b>Saved backups</b><br><span class="muted small">Saves copied from your calculators. Deleting them can't be undone.</span></span><button id="clearSaves" class="btn ghost small" type="button">Delete backups</button></div>
+  </dialog>
+
+  <dialog id="savesDlg">
+    <div class="sheet-head"><div><p class="eyebrow">BACKED UP ON THIS DEVICE</p><h2>Saves</h2></div><button id="closeSaves" class="link" type="button">Done</button></div>
+    <div class="row gap"><button id="backupNow" class="btn ghost small" type="button">Back up now</button><span id="backupMsg" class="muted small"></span></div>
+    <div id="savesBody"></div>
+  </dialog>
+
+  <dialog id="restoreDlg">
+    <div class="sheet-head"><div><p class="eyebrow" id="restoreWho">CALCULATOR</p><h2>Restore saves?</h2></div></div>
+    <p class="muted">These files were backed up from this calculator but aren't on it any more (a restart erases them). Pick what to put back.</p>
+    <ul id="restoreList" class="list"></ul>
+    <div class="row gap">
+      <button id="restoreGo" class="btn primary" type="button">Restore selected</button>
+      <button id="restoreNo" class="btn ghost" type="button">Not now</button>
+    </div>
+    <p id="restoreMsg" class="muted small"></p>
   </dialog>
 
   <dialog id="sheet">
@@ -90,9 +120,11 @@
       <button id="install" class="btn primary" type="button" disabled>Install on calculator</button>
       <button id="dry" class="btn ghost" type="button" disabled>Dry run</button>
     </div>
-    <p class="muted small">Installing replaces every app already in the calculator's extra-apps area. Your Python scripts and settings aren't touched. Keep the cable plugged in until it restarts.</p>
+    <p class="muted small">Installing replaces every app already in the calculator's extra-apps area. Python scripts (including your saves) stay, and NumFlash keeps a copy too. Keep the cable plugged in until it restarts.</p>
     <details><summary>Log</summary><pre id="log" class="log"></pre><button id="copyLog" class="link" type="button">Copy</button></details>
   </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
 
   <script type="module" src="js/app.js"></script>
 </body>

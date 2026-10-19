@@ -232,6 +232,41 @@ export class Calculator {
     return p;
   }
 
+  // ---- what is installed ------------------------------------------------------
+  /**
+   * Names of the apps in the external-apps area (read only). Each app starts on a 64 KB sector with a
+   * 32-byte header (magic, api level, name offset, icon size, icon offset, start, end, magic).
+   * Returns [{ address, name }], or null when this calculator's layout is not known. Call inside process().
+   */
+  async readInstalledApps() {
+    const fw = this.infos && this.infos.firmware;
+    if (!fw || typeof fw.externalAppsFlashStart !== 'number' || typeof fw.externalAppsFlashEnd !== 'number') return null;
+    const SECTOR = 65536, MAGIC = 0xDEC0BEBA;
+    const model = this.infos.model, end = fw.externalAppsFlashEnd;
+    const apps = [];
+    let addr = fw.externalAppsFlashStart;
+    for (let guard = 0; addr + SECTOR <= end && apps.length < 16 && guard < 200; guard++) {
+      this.isAddressValidFlash(model, addr, 32);
+      const h = await this.dfu.upload(addr, 32);
+      const dv = new DataView(h.buffer, h.byteOffset, h.byteLength);
+      if (dv.getUint32(0, true) === MAGIC && dv.getUint32(28, true) === MAGIC) {
+        const nameOffset = dv.getUint32(8, true), endOffset = dv.getUint32(24, true);
+        let name = '';
+        if (nameOffset > 0 && nameOffset < 0x400000 && addr + nameOffset + 48 <= model.ExternalFlashEnd) {
+          name = cString(await this.dfu.upload(addr + nameOffset, 48));
+        }
+        apps.push({ address: addr, name });
+        // The app is at least `endOffset` long (its data section follows); keep scanning sector by sector from there.
+        addr += Math.max(SECTOR, Math.ceil(endOffset / SECTOR) * SECTOR);
+      } else if (h.every((b) => b === 0xff)) {
+        break;                                  // erased sector: end of the list
+      } else {
+        addr += SECTOR;                          // inside an app (its data section), keep going
+      }
+    }
+    return apps;
+  }
+
   // ---- flash writes -----------------------------------------------------
   /**
    * Erase every page that `data` will cover, then write it.

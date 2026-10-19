@@ -1,0 +1,223 @@
+{
+ "tag": "v1.11.0",
+ "generated": "2026-10-18",
+ "apps": {
+  "2048.nwa": {
+   "size": 21616,
+   "sha256": "6cdfe51b7e7104633b080dc073ecb2bc205c978fa1e2b58957d2b108c5b54083",
+   "name": "2048",
+   "blankIcon": false,
+   "icon": "icons/apps/2048.png"
+  },
+  "Balatro.nwa": {
+   "size": 286964,
+   "sha256": "62b8c6ca604c68ac292f11315807d007f2aac99dbacc6ddba2ad91e0f324034f",
+   "name": "Balatro",
+   "blankIcon": false,
+   "icon": "icons/apps/Balatro.png"
+  },
+  "BlockBlast.nwa": {
+   "size": 34008,
+   "sha256": "731356e4ae67de9571f20b9c14a04c1a418c8fe2248bbba2953a847b7a467b6f",
+   "name": "Block Blast",
+   "blankIcon": false,
+   "icon": "icons/apps/BlockBlast.png"
+  },
+  "BlockBreaker.nwa": {
+   "size": 22916,
+   "sha256": "505d8207311d3194d6eb92935745b9e9811b2988ac55fd7d77a0a1ac8e9c9d6e",
+   "name": "Block Breaker",
+   "blankIcon": false,
+   "icon": "icons/apps/BlockBreaker.png"
+  },
+  "BuckshotRoulette.nwa": {
+   "size": 264704,
+   "sha256": "3c473a9d52f35d16ca4f1792a746c9df459e7d52c76908167aa8e3b13c958429",
+   "name": "Buckshot",
+   "blankIcon": false,
+   "icon": "icons/apps/BuckshotRoulette.png"
+  },
+  "Celeste.nwa": {
+   "size": 2594024,
+   "sha256": "574005f320de647aa9f9558a0afa282260eb84b8c88c8fd9af3cfc31f996bd0d",
+   "name": "Celeste",
+   "blankIcon": false,
+   "icon": "icons/apps/Celeste.png"
+  },
+  "ChampionIsland.nwa": {
+   "size": 2187560,
+   "sha256": "994602f51b72e4979a65c69e8b576973f7a0a861c4e6a5f0f9a25fe8dd0384aa",
+   "name": "Champion Island",
+   "blankIcon": false,
+   "icon": "icons/apps/ChampionIsland.png"
+  },
+  "ConnectFour.nwa": {
+   "size": 25720,
+   "sha256": "c2ddc61bfc1e7fb4df662377b7c353fe27874b8fdff009212981b204942e169e",
+   "name": "Connect 4",
+   "blankIcon": false,
+   "icon": "icons/apps/ConnectFour.png"
+  },
+  "CrossyRoad.nwa": {
+   "size": 19164,
+   "sha256": "fead36f07994900be33522794faa29d0dcab6eb92bac09f4ce3db393f75a1ee8",
+   "name": "Crossy Road",
+   "blankIcon": false,
+   "icon": "icons/apps/CrossyRoad.png"
+  },
+  "FinalEarth2.nwa": {
+   "size": 1197164,
+   "sha256": "511b3407bb1ffbbf3ba21676d71bcec833b466f85b7a434603fbd881dfc34ebd",
+   "name": "Final Earth 2",
+   "blankIcon": false,
+   "icon": "icons/apps/FinalEarth2.png"
+  },
+  "FlappyBird.nwa": {
+   "size": 27332,
+   "sha256": "67960d1a97a5f0954c30c3a71fac21960f30b9b1f854a9217a6a7d994340deda",
+   "name": "Flappy Bird",
+   "blankIcon": false,
+   "icon": "icons/apps/FlappyBird.png"
+  },
+  "HollowKnight.nwa": {
+   "size": 2204840,
+   "sha256": "4a55990b30f676f454a07a5a386e2f0685d420a338756386c27ecf3f060c357b",
+   "name": "Hollow Knight",
+   "blankIcon": false,
+   "icon": "icons/apps/HollowKnight.png"
+  },
+  "Minesweeper.nwa": {
+   "size": 26572,
+   "sha256": "3eab18fe90eb9d0056f1e57c128ee301167356e2e50207d790334db0d41fc472",
+   "name": "Minesweeper",
+   "blankIcon": false,
+   "icon": "icons/apps/Minesweeper.png"
+  },
+  "NumBlocks.nwa": {
+   "size": 622812,
+   "sha256": "2022342030a8bb385adf730e3431f42035efaf6dd681812a140a81dd7f5cb2ed",
+   "name": "NumBlocks",
+   "blankIcon": false,
+   "icon": "icons/apps/NumBlocks.png"
+  },
+  "NumChess.nwa": {
+   "size": 30720,
+   "sha256": "7c737d3d5fe8a7a0be96cab56a6f151a125ac44bba06ee6f507b4049614a9fa9",
+   "name": "Chess",
+   "blankIcon": false,
+   "icon": "icons/apps/NumChess.png"
+  },
+  "NumDash.nwa": {
+   "size": 598096,
+   "sha256": "0e7bbb743ea050bbe7077e1cc8bd7209a23b6b7c71deae178f14c9718a2e768d",
+   "name": "NumDash",
+   "blankIcon": false,
+   "icon": "icons/apps/NumDash.png"
+  },
+  "NumDrive.nwa": {
+   "size": 244340,
+   "sha256": "3a4b07240e37dbcae8229f3f0d41b4c27812ba827ad1ca838caa728d478121f7",
+   "name": "NumDrive",
+   "blankIcon": false,
+   "icon": "icons/apps/NumDrive.png"
+  },
+  "NumPlay-Chinese.nwa": {
+   "size": 2312200,
+   "sha256": "7337016a812bc456c46758387e39243c3111178d1e4b94caa2926b7b8d8c2a1d",
+   "name": "NumPlay",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPlay-Chinese.png"
+  },
+  "NumPlay-French.nwa": {
+   "size": 2300200,
+   "sha256": "b3c6eff83d548601893ef9803903ce89d17276f1d6655d1d6a89edc134c0713e",
+   "name": "NumPlay",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPlay-French.png"
+  },
+  "NumPlay-Invisible.nwa": {
+   "size": 2303400,
+   "sha256": "964328674142f09090d61270a68db56d5ef4246b05188a9a7ddb64d2f20da0bf",
+   "name": " ",
+   "blankIcon": true,
+   "icon": "icons/apps/NumPlay-Invisible.png"
+  },
+  "NumPlay-Matrices.nwa": {
+   "size": 2308432,
+   "sha256": "2303ce99b6c345b7cfb774713a631c1684e0f6622bd7d3b363ab5d07785bf681",
+   "name": "Matrices",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPlay-Matrices.png"
+  },
+  "NumPlay-Upsilon.nwa": {
+   "size": 465092,
+   "sha256": "63cfcd87765602be0bf6785eadd84b1c69e4cf9689f74064971c7792f99e242c",
+   "name": "NumPlay",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPlay-Upsilon.png"
+  },
+  "NumPlay.nwa": {
+   "size": 2309044,
+   "sha256": "3a8bbedddcfbd0a461db1081172fc1cc69f6b35b7452b11d757c64bdfe79bfb5",
+   "name": "NumPlay",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPlay.png"
+  },
+  "NumPowder.nwa": {
+   "size": 580144,
+   "sha256": "4fc2f595e59b8851d71b93edaa89f467176f7fbd9cf21a0266c733098f01adf5",
+   "name": "NumPowder",
+   "blankIcon": false,
+   "icon": "icons/apps/NumPowder.png"
+  },
+  "NumVisuals.nwa": {
+   "size": 24468,
+   "sha256": "ef79bba96f3b18a2fb6059ff4cea5102c3bab815e4244d13bdbcd190f7f3865a",
+   "name": "NumVisuals",
+   "blankIcon": false,
+   "icon": "icons/apps/NumVisuals.png"
+  },
+  "PacMan.nwa": {
+   "size": 25544,
+   "sha256": "56f791ef2af011753342d83a0489638cab37d5353f96787e754ef049f69f8e8a",
+   "name": "Pac-Man",
+   "blankIcon": false,
+   "icon": "icons/apps/PacMan.png"
+  },
+  "PortalReturns.nwa": {
+   "size": 43296,
+   "sha256": "585aea5c994afa595cf289e081b5a31513479edcceb934ff3957173ee9a59ebf",
+   "name": "Portal",
+   "blankIcon": false,
+   "icon": "icons/apps/PortalReturns.png"
+  },
+  "Snake.nwa": {
+   "size": 31232,
+   "sha256": "6c2fa328a6c8e872f481682b0811237943b2e21228990269e13198cfacf3917b",
+   "name": "Snake",
+   "blankIcon": false,
+   "icon": "icons/apps/Snake.png"
+  },
+  "Solitaire.nwa": {
+   "size": 28604,
+   "sha256": "0efb175e6107183532b9c00e192f75c51fa4aa10c7d361ec126af840516b0035",
+   "name": "Solitaire",
+   "blankIcon": false,
+   "icon": "icons/apps/Solitaire.png"
+  },
+  "Tetris.nwa": {
+   "size": 143156,
+   "sha256": "20190fe62b9d1c255204ec184c1f8136ac2e8eddf9bd5d16d78ff8487ef62250",
+   "name": "TETRIS",
+   "blankIcon": false,
+   "icon": "icons/apps/Tetris.png"
+  },
+  "Undertale.nwa": {
+   "size": 1942936,
+   "sha256": "70e80e58ba0d5882bd056de01db4d7a364d2beb2398a5db58e65bcbd349400df",
+   "name": "Undertale",
+   "blankIcon": false,
+   "icon": "icons/apps/Undertale.png"
+  }
+ }
+}
