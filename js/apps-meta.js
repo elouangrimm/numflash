@@ -63,7 +63,7 @@ export const SAVE_FILES = {
   'numblocks_saves.py': { title: 'NumBlocks', asset: 'NumBlocks.nwa' },
 };
 // Scripts that come with every calculator.
-export const DEFAULT_SCRIPTS = new Set(['mandelbrot.py', 'polynomial.py', 'parabola.py']);
+export const DEFAULT_SCRIPTS = new Set(['mandelbrot.py', 'polynomial.py', 'parabola.py', 'squares.py']);
 
 export const saveInfo = (fileName) => SAVE_FILES[fileName.toLowerCase()] || null;
 /** Which calculator records NumFlash backs up: Python scripts, except the ones every calculator has. */
